@@ -1,0 +1,67 @@
+# Se importan las librerias a utilizar
+#Importando librerias que se van a utilizar
+import socket, sys, pickle
+from _thread import *
+
+
+# Definición de variables importantes.
+server = '192.168.1.100'
+port = 4444
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+try:
+	s.bind((server, port))
+except 	socket.error as  e:
+	str(e)
+
+s.listen(2)
+print("Esperando conexión, servidor iniciado")
+
+# Esta funcion se encarga de leer la posicion de los jugadores y la decodifica
+def read_pos(str):  
+	str = str.split(",")
+	return int(str[0]), int(str[1])
+# Esta funcion se encarga de convertir la posisicion de los jugadores a una tupla.
+def make_pos(tup):
+	return str(tup[0]) + " , " + str(tup[1])
+
+
+pos = [(400, 550), (370, 550)]
+
+# Con esta funcion es con la que se realiza el cambio de informacion entre clientes
+def threaded_client(conn, player):
+	conn.send(str.encode(make_pos(pos[player])))
+	reply = ''
+	while True:
+		try:
+			data = read_pos(conn.recv(2048).decode())
+			pos[player] = data
+
+			if not data:
+				print("Desconectado")
+				break
+			else:
+				if player == 1:
+					reply = pos[0]
+				else:
+					reply = pos[1]
+				print("Recibido: ", data)
+				print("Enviando: ", reply)
+
+			conn.sendall(str.encode(make_pos(reply)))
+		except:
+			break
+
+	print("conexión perdida")
+	conn.close()
+
+CurrentPlayer = 0
+while True:
+	conn, addr = s.accept()
+	print("Conectado a:", addr)
+
+
+	start_new_thread(threaded_client, (conn, CurrentPlayer))
+	CurrentPlayer += 1
+
